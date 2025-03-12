@@ -7,8 +7,8 @@ class DataBinner:
         self.n_bins = n_bins
         self.random_state = random_state
         self.models = []  # For each feature, store breakpoints or fitted model
-
-    def fit(self, X):
+        
+    def fit(self, X, y = None):
         n_features = X.shape[1]
         for i in range(n_features):
             col = X[:, i]
@@ -20,9 +20,10 @@ class DataBinner:
             elif self.method == 'quantile':
                 breakpoints = np.quantile(col, np.linspace(0, 1, n_bins))
                 self.models.append(breakpoints)
-            elif self.method == 'none':
+            elif 'none' in self.method:
                 pass
             elif self.method == 'minibatch_kmeans':
+                # Normalize data to improve clustering performance
                 model = MiniBatchKMeans(n_clusters=n_bins, random_state=self.random_state, n_init = 1)
                 model.fit(col.reshape(-1, 1))
                 # Sort cluster centers so the bin labels reflect ascending numeric order
@@ -66,8 +67,8 @@ class DataBinner:
             else:
                 raise ValueError("Invalid method. Choose one of ['linspace', 'quantile', 'jenks', 'kmeans', 'bisecting_kmeans', 'agglomerative'].")
         return self
-
-    def transform(self, X):
+    
+    def transform(self, X, y = None):
         X_binned = np.zeros(X.shape)
         n_features = X.shape[1]
         for i in range(n_features):
@@ -88,10 +89,10 @@ class DataBinner:
                 # This is a simple heuristic since AgglomerativeClustering does not provide a predict method.
                 distances = np.abs(col.reshape(-1, 1) - centers.reshape(1, -1))
                 X_binned[:, i] = np.argmin(distances, axis=1)
-            elif self.method == 'none':
+            elif 'none' in self.method:
                 X_binned = X
         return X_binned
 
-    def fit_transform(self, X):
+    def fit_transform(self, X, y = None):
         self.fit(X)
         return self.transform(X)
