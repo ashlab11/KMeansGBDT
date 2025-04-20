@@ -68,16 +68,15 @@ models = [
 
 # List of binning methods to experiment with
 binning_methods = [
-    'mdlp',
-    'minibatch_kmeans', 
+    #'kmeans',
     'quantile',
     'linspace', 
-    'none'
+    #'none'
 ]
 
 # Retrieve a benchmark suite from OpenML and select a task
 benchmark_suite = openml.study.get_suite(336) #337 for classification
-benchmark_id = 1
+benchmark_id = 0
 task_id = benchmark_suite.tasks[benchmark_id]
 
 task = openml.tasks.get_task(task_id)
@@ -93,7 +92,7 @@ memory = get_memory_for_dataset(task_id)
 X, y = task.get_X_and_y(dataset_format='dataframe')
 original_feature_names = X.columns
 
-num_seeds = 10  # number of random splits
+num_seeds = 20  # number of random splits
 
 # Create dictionaries to store the results and best parameters per binning method
 results = {}
@@ -114,7 +113,7 @@ for j, (model, model_name, param_dist) in enumerate(models):
             # Apply binning to features: fit on training data and then transform both training and test data.
             binner = DataBinner(method=bin_method, n_bins=255, random_state=seed)
             
-            pipeline = make_pipeline(binner, model, memory = "../cached_datasets/")
+            pipeline = make_pipeline(binner, model)
             
             cv = RandomizedSearchCV(
                 pipeline, param_dist, n_iter=30, cv=5, n_jobs=-1,
@@ -122,14 +121,14 @@ for j, (model, model_name, param_dist) in enumerate(models):
                 error_score='raise', verbose=0
             )
             cv.fit(X_train, y_train)
-
+            
             # Predict on the test set and compute error.
             y_pred = cv.predict(X_test)
-            error = -1 * r2_score(y_test, y_pred)
+            error = mean_squared_error(y_test, y_pred)
             errors[i, j, seed] = error
             print(f"Seed {seed} - Error: {error}")
             
-            memory.clear(warn=False)
+            #memory.clear(warn=False)
 
         method_errors = errors[i, j, :]
         mean_error = np.mean(method_errors)

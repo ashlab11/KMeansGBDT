@@ -74,7 +74,6 @@ models = [
 binning_methods = [
     'quantile',
     'kmeans', 
-    
     'linspace', 
     'none'
 ]
@@ -119,8 +118,8 @@ for j, (model, model_name, param_dist) in enumerate(models):
             # Apply binning to features: fit on training data and then transform both training and test data.
             binner = DataBinner(method=bin_method, n_bins=255, random_state=seed)
             
-            memory = get_memory_for_dataset(task_id, model_name, bin_method, seed)
-            pipeline = make_pipeline(binner, model, memory = memory)
+            #memory = get_memory_for_dataset(task_id, model_name, bin_method, seed)
+            pipeline = make_pipeline(binner, model) #add memory = memory here eventually
             
             cv = RandomizedSearchCV(
                 pipeline, param_dist, n_iter=30, cv=5, n_jobs=-1,
@@ -135,7 +134,7 @@ for j, (model, model_name, param_dist) in enumerate(models):
             errors[i, j, seed] = error
             print(f"Seed {seed} - Error: {error}")
             
-            shutil.rmtree(memory.location, ignore_errors=True)
+            #shutil.rmtree(memory.location, ignore_errors=True)
 
         method_errors = errors[i, j, :]
         mean_error = np.mean(method_errors)
@@ -144,7 +143,6 @@ for j, (model, model_name, param_dist) in enumerate(models):
 
         results.setdefault(bin_method, {})
         results[bin_method][model_name] = method_errors.tolist()
-
 
 
 # -------------------------

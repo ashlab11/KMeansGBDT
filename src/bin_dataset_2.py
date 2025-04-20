@@ -19,11 +19,11 @@ class DataBinner:
     def __init__(self,
                  method: str,
                  n_bins: int = 255,
-                 kmeans_init: str = "quantile",
+                 #kmeans_init: str = "quantile",
                  random_state: int = 0):
         self.method = method
         self.n_bins = n_bins
-        self.kmeans_init = kmeans_init
+        #self.kmeans_init = kmeans_init
         self.random_state = random_state
         # will be filled after fit()
         self._models = []
@@ -35,7 +35,7 @@ class DataBinner:
     def get_params(self, deep=True):
         return {"method": self.method,
                 "n_bins": self.n_bins,
-                "kmeans_init": self.kmeans_init,
+                #"kmeans_init": self.kmeans_init,
                 "random_state": self.random_state}
 
     def set_params(self, **params):
@@ -48,7 +48,7 @@ class DataBinner:
     # ------------------------------------------------------------------ #
     def _fit_one_column(self, col: np.ndarray):
         """Return representation needed at transform‑time."""
-        n_bins = min(self.n_bins, np.unique(col).size)
+        n_bins = min(self.n_bins, len(np.unique(col)))
         if self.method == "linspace":
             # n_bins‑1 inner cut points
             cuts = np.linspace(col.min(), col.max(), n_bins + 1)[1:-1]
@@ -60,27 +60,25 @@ class DataBinner:
             return cuts         # drop potential duplicates
 
         if self.method == "kmeans":
+            col_std = (col - np.mean(col)) / np.std(col)
+            
             # ---- choose initial centres ----------------------------------
-            seeds = np.quantile(col,
+            seeds = np.quantile(col_std,
                                 np.linspace(0, 1, n_bins + 2)[1:-1])
             #seeds = np.unique(seeds)         # de‑duplicate"""
 
-            if self.kmeans_init == "++":     # force k‑means++
-                init_arg  = "k-means++"
-                n_clusters = self.n_bins
-            else:                            # "quantile"
-                init_arg  = seeds.reshape(-1, 1)
-                n_clusters = len(seeds)      # may be < n_bins if ties w/ quantile
-                if n_clusters < 2:           # pathological all‑equal column
-                    return []
+            init_arg  = seeds.reshape(-1, 1)
+            n_clusters = len(seeds)      # may be < n_bins if ties w/ quantile
+            if n_clusters < 2:           # pathological all‑equal column
+                return []
 
-            km = MiniBatchKMeans(n_clusters=n_clusters,
-                        init=init_arg,
+            km = MiniBatchKMeans(n_clusters=self.n_bins,
                         n_init=1,
                         #max_iter=100,
-                        random_state=self.random_state).fit(col.reshape(-1,1))
+                        random_state=self.random_state).fit(col_std.reshape(-1,1))
 
             centres = np.sort(km.cluster_centers_.ravel())
+            centres = centres * np.std(col) + np.mean(col)
             cuts = (centres[:-1] + centres[1:]) / 2.0
             return cuts
 
