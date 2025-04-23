@@ -8,6 +8,7 @@ import time
 import warnings
 import pandas as pd
 from scipy.stats import uniform, randint, loguniform, ttest_rel
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error, r2_score
@@ -35,53 +36,45 @@ warnings.filterwarnings("ignore", category=UserWarning)
 logging.getLogger("sklearn").setLevel(logging.ERROR)
 logging.getLogger("lightgbm").setLevel(logging.ERROR)
 
+# Parameter distribution for sklearn
+param_dist_sklearn = {
+    'gradientboostingregressor__n_estimators': randint(20, 300),
+    'gradientboostingregressor__learning_rate': loguniform(0.001, 0.5),
+    'gradientboostingregressor__max_depth': randint(3, 6),
+    'gradientboostingregressor__subsample': uniform(0.5, 0.5),
+    'gradientboostingregressor__max_features': uniform(0.5, 0.5)}
+
 # Parameter distribution for LightGBM
 param_dist_lgbm = {
-    'lgbmregressor__n_estimators': randint(20, 150),
+    'lgbmregressor__n_estimators': randint(20, 300),
     'lgbmregressor__learning_rate': loguniform(0.001, 0.5),
     'lgbmregressor__num_leaves': randint(8, 64),
     'lgbmregressor__subsample': uniform(0.5, 0.5),
     'lgbmregressor__colsample_bytree': uniform(0.5, 0.5)
 }
 
-param_dist_xgb = {
-    'xgbregressor__n_estimators': randint(20, 150),
-    'xgbregressor__max_depth': randint(3, 6),
-    'xgbregressor__learning_rate': loguniform(0.001, 0.5),
-    'xgbregressor__subsample': uniform(0.5, 0.5),
-    'xgbregressor__colsample_bytree': uniform(0.5, 0.5),
-}
-
-param_dist_cat = {
-    'catboostregressor__n_estimators': randint(20, 150),
-    'catboostregressor__learning_rate': loguniform(0.001, 0.5),
-    'catboostregressor__depth': randint(3, 6),
-    'catboostregressor__subsample': uniform(0.5, 0.5),
-    'catboostregressor__colsample_bylevel': uniform(0.5, 0.5)
-}
-
 models = [
+    (GradientBoostingRegressor(), "SKL", param_dist_sklearn),
     (LGBMRegressor(verbosity=-1, n_jobs=1, random_state=42), "LGBM", param_dist_lgbm), 
-    (XGBRegressor(random_state=42, max_bin=255, tree_method = 'hist'), "XGB", param_dist_xgb), 
-    (CatBoostRegressor(verbose = False, random_state = 42, max_bin=255), "CAT", param_dist_cat)
 ]
 
 # List of binning methods to experiment with
 binning_methods = [
-    #'kmeans',
+    'kmeans',
     'quantile',
-    'linspace', 
-    #'none'
+    'linspace',
+    'exact'
 ]
 
 # Retrieve a benchmark suite from OpenML and select a task
 benchmark_suite = openml.study.get_suite(336) #337 for classification
-benchmark_id = 0
+benchmark_id = int(os.getenv("SLURM_ARRAY_TASK_ID"))
 task_id = benchmark_suite.tasks[benchmark_id]
 
 task = openml.tasks.get_task(task_id)
 dataset = task.get_dataset()
 name = dataset.name
+print(dataset.format)
 obs = dataset.qualities['NumberOfInstances']
 features = dataset.qualities['NumberOfFeatures']
 print(f"===== DATASET {name} with {obs} observations and {features} features =====")
@@ -90,13 +83,17 @@ memory = get_memory_for_dataset(task_id)
 
 # Get X and y
 X, y = task.get_X_and_y(dataset_format='dataframe')
+X = X.astype(float)
+y = y.astype(float)
+print(X.dtypes)
 original_feature_names = X.columns
 
 num_seeds = 20  # number of random splits
 
-# Create dictionaries to store the results and best parameters per binning method
+# Creating dictionaries to store the results and best parameters per binning method
 results = {}
-errors = np.zeros((len(binning_methods), len(models), num_seeds))
+r2_scores = np.zeros((len(binning_methods), len(models), num_seeds))
+mses = np.zeros((len(binning_methods), len(models), num_seeds))
 
 for j, (model, model_name, param_dist) in enumerate(models):
     for i, bin_method in enumerate(binning_methods):
@@ -113,7 +110,14 @@ for j, (model, model_name, param_dist) in enumerate(models):
             # Apply binning to features: fit on training data and then transform both training and test data.
             binner = DataBinner(method=bin_method, n_bins=255, random_state=seed)
             
-            pipeline = make_pipeline(binner, model)
+            if bin_method == 'exact':
+                #We also want to test against how the model does assuming NO binning -- will take SIGNIFICANTLY longer
+                if model_name == 'LGBM':
+                    # This is a workaround for LGBMRegressor, which doesn't natively support naive no-binning methods
+                    param_dist['lgbmregressor__max_bin'] = len(X_train)
+                pipeline = model
+            else:
+                pipeline = make_pipeline(binner, model)
             
             cv = RandomizedSearchCV(
                 pipeline, param_dist, n_iter=30, cv=5, n_jobs=-1,
@@ -124,18 +128,35 @@ for j, (model, model_name, param_dist) in enumerate(models):
             
             # Predict on the test set and compute error.
             y_pred = cv.predict(X_test)
-            error = mean_squared_error(y_test, y_pred)
-            errors[i, j, seed] = error
-            print(f"Seed {seed} - Error: {error}")
+            mse = mean_squared_error(y_test, y_pred)
+            mses[i, j, seed] = mse
+            r2 = r2_score(y_test, y_pred)
+            r2_scores[i, j, seed] = r2
+            
+            print(f"Seed {seed}: MSE: {mse}, R2: {r2}")
             
             #memory.clear(warn=False)
 
-        method_errors = errors[i, j, :]
-        mean_error = np.mean(method_errors)
-        std_error = np.std(method_errors) / np.sqrt(num_seeds)
-        print(f"Mean error for {bin_method}, {model_name}: {mean_error}, std: {std_error}")
+        #Printing out mean and std of MSE/R2 for each binning method and model
+        method_mse = mses[i, j, :]
+        mean_mse = np.mean(method_mse)
+        std_mse = np.std(method_mse) / np.sqrt(num_seeds)
+        
+        method_r2 = r2_scores[i, j, :]
+        mean_r2 = np.mean(method_r2)
+        std_r2 = np.std(method_r2) / np.sqrt(num_seeds)
+        
+        print(f"For {bin_method}, {model_name}:", 
+              f"Mean MSE: {mean_mse}, std: {std_mse},",
+              f"Mean R2: {mean_r2}, std: {std_r2}")
 
+        # Storing the results in a dictionary
         results.setdefault(bin_method, {})
-        results[bin_method][model_name] = method_errors.tolist()
+        results[bin_method].setdefault(model_name, {})
+        
+        results[bin_method][model_name]['mse'] = method_mse.tolist()
+        results[bin_method][model_name]['r2'] = method_r2.tolist()
 
-    
+#Saving the results to JSON file
+with open(f"reg_results_{benchmark_id}.json", "w") as f:
+    json.dump(results, f, indent=4)

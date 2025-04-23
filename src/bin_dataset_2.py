@@ -19,11 +19,9 @@ class DataBinner:
     def __init__(self,
                  method: str,
                  n_bins: int = 255,
-                 #kmeans_init: str = "quantile",
                  random_state: int = 0):
         self.method = method
         self.n_bins = n_bins
-        #self.kmeans_init = kmeans_init
         self.random_state = random_state
         # will be filled after fit()
         self._models = []
@@ -35,7 +33,6 @@ class DataBinner:
     def get_params(self, deep=True):
         return {"method": self.method,
                 "n_bins": self.n_bins,
-                #"kmeans_init": self.kmeans_init,
                 "random_state": self.random_state}
 
     def set_params(self, **params):
@@ -47,41 +44,37 @@ class DataBinner:
     #  Core logic
     # ------------------------------------------------------------------ #
     def _fit_one_column(self, col: np.ndarray):
-        """Return representation needed at transform‑time."""
-        n_bins = min(self.n_bins, len(np.unique(col)))
+        """Return representation needed at transform-time."""
+        unique = np.unique(col)
+        if len(unique) < self.n_bins:
+            sorted_unique = np.sort(unique)
+            cuts = (sorted_unique[1:] + sorted_unique[:-1]) / 2.0
+            return cuts
+        
         if self.method == "linspace":
             # n_bins‑1 inner cut points
-            cuts = np.linspace(col.min(), col.max(), n_bins + 1)[1:-1]
+            cuts = np.linspace(col.min(), col.max(), self.n_bins + 1)[1:-1]
             return cuts
 
         if self.method == "quantile":
             # include both end‑points to ensure all values fall in a bin
-            cuts = np.quantile(col, np.linspace(0, 1, n_bins + 1))[1:-1]
-            return cuts         # drop potential duplicates
+            cuts = np.quantile(col, np.linspace(0, 1, self.n_bins + 1))[1:-1]
+            return cuts         
 
-        if self.method == "kmeans":
-            col_std = (col - np.mean(col)) / np.std(col)
-            
+        if self.method == "kmeans":          
             # ---- choose initial centres ----------------------------------
-            seeds = np.quantile(col_std,
-                                np.linspace(0, 1, n_bins + 2)[1:-1])
-            #seeds = np.unique(seeds)         # de‑duplicate"""
+            seeds = np.quantile(col,
+                                np.linspace(0, 1, self.n_bins))
 
-            init_arg  = seeds.reshape(-1, 1)
-            n_clusters = len(seeds)      # may be < n_bins if ties w/ quantile
-            if n_clusters < 2:           # pathological all‑equal column
-                return []
-
-            km = MiniBatchKMeans(n_clusters=self.n_bins,
+            km = KMeans(n_clusters=self.n_bins,
+                        init=seeds.reshape(-1, 1),
                         n_init=1,
-                        #max_iter=100,
-                        random_state=self.random_state).fit(col_std.reshape(-1,1))
+                        random_state=self.random_state).fit(col.reshape(-1,1))
 
             centres = np.sort(km.cluster_centers_.ravel())
-            centres = centres * np.std(col) + np.mean(col)
             cuts = (centres[:-1] + centres[1:]) / 2.0
             return cuts
-
+        
         raise ValueError("method must be 'linspace', 'quantile', or 'kmeans'")
 
     def fit(self, X, y=None):
@@ -91,8 +84,9 @@ class DataBinner:
             X_arr = X.values
         else:
             X_arr = np.asarray(X)
-        self._models = [self._fit_one_column(X_arr[:, j])
-                        for j in range(X_arr.shape[1])]
+        for j in range(X_arr.shape[1]):
+            cuts = self._fit_one_column(X_arr[:, j])
+            self._models.append(cuts)
         return self
 
     # ------------------------------------------------------------------ #
@@ -106,10 +100,10 @@ class DataBinner:
             cols = None
             X_arr = np.asarray(X)
 
-        out = np.empty_like(X_arr, dtype=int)
+        out = np.zeros_like(X_arr, dtype=int)
 
-        for j, cuts in enumerate(self._models):
-            out[:, j] = np.digitize(X_arr[:, j], cuts)
+        for j, breakpoints in enumerate(self._models):
+            out[:, j] = np.digitize(X_arr[:, j], breakpoints)
 
         if cols is not None:
             out = pd.DataFrame(out, columns=cols)
