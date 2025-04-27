@@ -8,15 +8,16 @@ import time
 import warnings
 import pandas as pd
 from scipy.stats import uniform, randint, loguniform, ttest_rel
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.pipeline import make_pipeline
-from sklearn.metrics import mean_squared_error, r2_score
-from lightgbm import LGBMRegressor
-from xgboost import XGBRegressor
-from catboost import CatBoostRegressor
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, roc_auc_score
+from lightgbm import LGBMRegressor, LGBMClassifier
+from xgboost import XGBRegressor, XGBClassifier
+from catboost import CatBoostRegressor, CatBoostClassifier
+from sklearn.preprocessing import LabelEncoder
 from joblib import Memory
-
+import re
 
 # Import our binning class.
 # DataBinner should be defined as in our previous example.
@@ -38,37 +39,37 @@ logging.getLogger("lightgbm").setLevel(logging.ERROR)
 
 # Parameter distribution for sklearn
 param_dist_sklearn = {
-    'gradientboostingregressor__n_estimators': randint(20, 300),
-    'gradientboostingregressor__learning_rate': loguniform(0.001, 0.5),
-    'gradientboostingregressor__max_depth': randint(3, 6),
-    'gradientboostingregressor__subsample': uniform(0.5, 0.5),
-    'gradientboostingregressor__max_features': uniform(0.5, 0.5)}
+    'gradientboostingclassifier__n_estimators': randint(20, 300),
+    'gradientboostingclassifier__learning_rate': loguniform(0.001, 0.5),
+    'gradientboostingclassifier__max_depth': randint(3, 6),
+    'gradientboostingclassifier__subsample': uniform(0.5, 0.5),
+    'gradientboostingclassifier__max_features': uniform(0.5, 0.5)}
 
 # Parameter distribution for LightGBM
 param_dist_lgbm = {
-    'lgbmregressor__n_estimators': randint(20, 300),
-    'lgbmregressor__learning_rate': loguniform(0.001, 0.5),
-    'lgbmregressor__num_leaves': randint(8, 64),
-    'lgbmregressor__subsample': uniform(0.5, 0.5),
-    'lgbmregressor__colsample_bytree': uniform(0.5, 0.5)
+    'lgbmclassifier__n_estimators': randint(20, 300),
+    'lgbmclassifier__learning_rate': loguniform(0.001, 0.5),
+    'lgbmclassifier__num_leaves': randint(8, 64),
+    'lgbmclassifier__subsample': uniform(0.5, 0.5),
+    'lgbmclassifier__colsample_bytree': uniform(0.5, 0.5)
 }
 
 models = [
-    (GradientBoostingRegressor(), "SKL", param_dist_sklearn),
-    (LGBMRegressor(verbosity=-1, n_jobs=1, random_state=42), "LGBM", param_dist_lgbm), 
+    (GradientBoostingClassifier(), "SKL", param_dist_sklearn),
+    (LGBMClassifier(verbosity=-1, n_jobs=1, random_state=42), "LGBM", param_dist_lgbm), 
 ]
 
 # List of binning methods to experiment with
 binning_methods = [
-    #'exact',
     'kmeans',
     'quantile',
-    'linspace'
+    'linspace',
+    'exact'
 ]
 
 # Retrieve a benchmark suite from OpenML and select a task
-benchmark_suite = openml.study.get_suite(336) #337 for classification
-benchmark_id = 4
+benchmark_suite = openml.study.get_suite(337) #337 for classification
+benchmark_id = 0
 task_id = benchmark_suite.tasks[benchmark_id]
 
 task = openml.tasks.get_task(task_id)
@@ -79,27 +80,31 @@ obs = dataset.qualities['NumberOfInstances']
 features = dataset.qualities['NumberOfFeatures']
 print(f"===== DATASET {name} with {obs} observations and {features} features =====")
 
-
 # Get X and y
 X, y = task.get_X_and_y(dataset_format='dataframe')
+#Columns 0/3 are the highly-skewed columns
+X = X.iloc[:, [0]]
+
+print([X[col].skew() for col in X.columns])
+print([len(X[col].unique()) for col in X.columns])
+X = X.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '', x))
+
 X = X.astype(float)
-y = y.astype(float)
-print(X.dtypes)
+y = LabelEncoder().fit_transform(y)  # Encode labels for classification
 original_feature_names = X.columns
 
 num_seeds = 20  # number of random splits
 
 # Creating dictionaries to store the results and best parameters per binning method
 results = {}
-r2_scores = np.zeros((len(binning_methods), len(models), num_seeds))
-mses = np.zeros((len(binning_methods), len(models), num_seeds))
+accuracies = np.zeros((len(binning_methods), len(models), num_seeds))
+roc_aucs = np.zeros((len(binning_methods), len(models), num_seeds))
 
 for j, (model, model_name, param_dist) in enumerate(models):
     for i, bin_method in enumerate(binning_methods):
         print(f"-----MODEL: {model_name}-----")
         print(f"----- method: {bin_method} -----")
         for seed in range(num_seeds):
-            
             memory = get_memory_for_dataset(bin_method, task_id, seed)
             
             # Split the data
@@ -116,49 +121,52 @@ for j, (model, model_name, param_dist) in enumerate(models):
                 #We also want to test against how the model does assuming NO binning -- will take SIGNIFICANTLY longer
                 if model_name == 'LGBM':
                     # This is a workaround for LGBMRegressor, which doesn't natively support naive no-binning methods
-                    param_dist['lgbmregressor__max_bin'] = [len(X_train)]
-                pipeline = make_pipeline(model, memory = memory)
+                    param_dist['lgbmclassifier__max_bin'] = [len(X_train)]
+                pipeline = make_pipeline(model, memory=memory)
             else:
-                pipeline = make_pipeline(binner, model, memory = memory)
+                pipeline = make_pipeline(binner, model, memory=memory)
             
             cv = RandomizedSearchCV(
                 pipeline, param_dist, n_iter=30, cv=5, n_jobs=-1,
-                random_state=seed, scoring='neg_mean_squared_error',
+                random_state=seed, scoring='roc_auc',
                 error_score='raise', verbose=0
             )
             cv.fit(X_train, y_train)
             
-            # Predict on the test set and compute error.
+            # Get accuracy
             y_pred = cv.predict(X_test)
-            mse = mean_squared_error(y_test, y_pred)
-            mses[i, j, seed] = mse
-            r2 = r2_score(y_test, y_pred)
-            r2_scores[i, j, seed] = r2
+            accuracy = accuracy_score(y_test, y_pred)
+            accuracies[i, j, seed] = accuracy
             
-            print(f"Seed {seed}: MSE: {mse}, R2: {r2}")
+            # Get ROC AUC
+            y_pred_proba = cv.predict_proba(X_test)[:, 1]
+            roc_auc = roc_auc_score(y_test, y_pred_proba)
+            roc_aucs[i, j, seed] = roc_auc
+            
+            print(f"Seed {seed}: Accuracy: {accuracy}, ROC AUC: {roc_auc}")
             
             memory.clear(warn=False)
 
         #Printing out mean and std of MSE/R2 for each binning method and model
-        method_mse = mses[i, j, :]
-        mean_mse = np.mean(method_mse)
-        std_mse = np.std(method_mse) / np.sqrt(num_seeds)
+        method_accuracies = accuracies[i, j, :]
+        mean_acc = np.mean(method_accuracies)
+        std_acc = np.std(method_accuracies) / np.sqrt(num_seeds)
         
-        method_r2 = r2_scores[i, j, :]
-        mean_r2 = np.mean(method_r2)
-        std_r2 = np.std(method_r2) / np.sqrt(num_seeds)
+        method_roc = roc_aucs[i, j, :]
+        mean_roc = np.mean(method_roc)
+        std_roc = np.std(method_roc) / np.sqrt(num_seeds)
         
         print(f"For {bin_method}, {model_name}:", 
-              f"Mean MSE: {mean_mse}, std: {std_mse},",
-              f"Mean R2: {mean_r2}, std: {std_r2}")
+              f"Mean MSE: {mean_acc}, std: {std_acc},",
+              f"Mean R2: {mean_roc}, std: {std_roc}")
 
         # Storing the results in a dictionary
         results.setdefault(bin_method, {})
         results[bin_method].setdefault(model_name, {})
         
-        results[bin_method][model_name]['mse'] = method_mse.tolist()
-        results[bin_method][model_name]['r2'] = method_r2.tolist()
+        results[bin_method][model_name]['accuracy'] = method_accuracies.tolist()
+        results[bin_method][model_name]['roc_auc'] = method_roc.tolist()
 
 #Saving the results to JSON file
-with open(f"reg_results_{benchmark_id}.json", "w") as f:
+with open(f"class_results_binning_{benchmark_id}.json", "w") as f:
     json.dump(results, f, indent=4)

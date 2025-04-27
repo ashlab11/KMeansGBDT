@@ -1,1 +1,1 @@
-from .bin_dataset_2 import DataBinner
+from .bin_dataset import DataBinner

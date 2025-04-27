@@ -46,7 +46,7 @@ class DataBinner:
     def _fit_one_column(self, col: np.ndarray):
         """Return representation needed at transform-time."""
         unique = np.unique(col)
-        if len(unique) < self.n_bins:
+        if len(unique) <= self.n_bins:
             sorted_unique = np.sort(unique)
             cuts = (sorted_unique[1:] + sorted_unique[:-1]) / 2.0
             return cuts
