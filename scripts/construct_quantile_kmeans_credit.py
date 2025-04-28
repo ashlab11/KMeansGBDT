@@ -7,7 +7,7 @@ from matplotlib.ticker import ScalarFormatter, AutoMinorLocator
 class_benchmark_suite = openml.study.get_suite(337)  # 337 for classification
 
 dataset_idx = 0
-col_idx = 3
+col_idx = 0
 task_id = class_benchmark_suite.tasks[dataset_idx]
 task = openml.tasks.get_task(task_id)
 dataset = task.get_dataset()
@@ -40,7 +40,6 @@ ax.hist(
     label="Original sample"
 )
 
-# ── vertical bin edges (sample every 10th to avoid clutter) ─────────────────
 step = 1
 ax.vlines(
     splits_q[::step],

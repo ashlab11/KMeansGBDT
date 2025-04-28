@@ -11,7 +11,7 @@ from scipy.stats import uniform, randint, loguniform, ttest_rel
 from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.pipeline import make_pipeline
-from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, roc_auc_score
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, roc_auc_score, log_loss
 from lightgbm import LGBMRegressor, LGBMClassifier
 from xgboost import XGBRegressor, XGBClassifier
 from catboost import CatBoostRegressor, CatBoostClassifier
@@ -93,7 +93,7 @@ X = X.astype(float)
 y = LabelEncoder().fit_transform(y)  # Encode labels for classification
 original_feature_names = X.columns
 
-num_seeds = 20  # number of random splits
+num_seeds = 10  # number of random splits
 
 # Creating dictionaries to store the results and best parameters per binning method
 results = {}
@@ -128,7 +128,7 @@ for j, (model, model_name, param_dist) in enumerate(models):
             
             cv = RandomizedSearchCV(
                 pipeline, param_dist, n_iter=30, cv=5, n_jobs=-1,
-                random_state=seed, scoring='roc_auc',
+                random_state=seed, scoring='neg_log_loss',
                 error_score='raise', verbose=0
             )
             cv.fit(X_train, y_train)
@@ -140,7 +140,7 @@ for j, (model, model_name, param_dist) in enumerate(models):
             
             # Get ROC AUC
             y_pred_proba = cv.predict_proba(X_test)[:, 1]
-            roc_auc = roc_auc_score(y_test, y_pred_proba)
+            roc_auc = log_loss(y_test, y_pred_proba)
             roc_aucs[i, j, seed] = roc_auc
             
             print(f"Seed {seed}: Accuracy: {accuracy}, ROC AUC: {roc_auc}")
