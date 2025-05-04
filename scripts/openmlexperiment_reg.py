@@ -55,7 +55,7 @@ param_dist_lgbm = {
 
 models = [
     (GradientBoostingRegressor(), "SKL", param_dist_sklearn),
-    (LGBMRegressor(verbosity=-1, n_jobs=1, random_state=42), "LGBM", param_dist_lgbm), 
+    #(LGBMRegressor(verbosity=-1, n_jobs=1, random_state=42), "LGBM", param_dist_lgbm), 
 ]
 
 # List of binning methods to experiment with
@@ -67,14 +67,15 @@ binning_methods = [
 ]
 
 # Retrieve a benchmark suite from OpenML and select a task
-benchmark_suite = openml.study.get_suite(336) #337 for classification
-benchmark_id = 4
+benchmark_suite = openml.study.get_suite(353) #337 for classification
+benchmark_id = 0
 task_id = benchmark_suite.tasks[benchmark_id]
 
 task = openml.tasks.get_task(task_id)
 dataset = task.get_dataset()
 name = dataset.name
 print(dataset.format)
+print(dataset.qualities)
 obs = dataset.qualities['NumberOfInstances']
 features = dataset.qualities['NumberOfFeatures']
 print(f"===== DATASET {name} with {obs} observations and {features} features =====")

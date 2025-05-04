@@ -4,11 +4,11 @@ import numpy as np
 from src import DataBinner
 from matplotlib.ticker import ScalarFormatter, AutoMinorLocator
 
-class_benchmark_suite = openml.study.get_suite(337)  # 337 for classification
+reg_benchmark_suite = openml.study.get_suite(336)  # 337 for classification
 
-dataset_idx = 0
-col_idx = 0
-task_id = class_benchmark_suite.tasks[dataset_idx]
+dataset_idx = 8
+col_idx = 4
+task_id = reg_benchmark_suite.tasks[dataset_idx]
 task = openml.tasks.get_task(task_id)
 dataset = task.get_dataset()
 name = dataset.name
@@ -58,7 +58,7 @@ ax.vlines(
 
 # ── axes styling ─────────────────────────────────────────────────────────────
 ax.set(
-    title=f"Quantile vs K-Means Binning – Credit, Column {col_idx}",
+    title=f"Quantile vs K-Means Binning – Brazilian Houses, Column {col_idx}",
     xlabel="Feature value",
     ylabel="Count",
     yscale="log"
@@ -66,6 +66,8 @@ ax.set(
 
 ax.yaxis.set_minor_locator(AutoMinorLocator())
 ax.grid(which="both", axis="y", linewidth=0.3, alpha=0.5)
+plt.ticklabel_format(style='plain', axis='x')
+
 
 ax.yaxis.set_major_formatter(ScalarFormatter())
 ax.tick_params(axis="both", which="major", labelsize=8)
@@ -76,4 +78,4 @@ for spine in ("right", "top"):
     ax.spines[spine].set_visible(False)
 
 #Save as png
-plt.savefig(f"images/credit_col_{col_idx}_quantile_vs_kmeans.png", bbox_inches="tight")
+plt.savefig(f"images/brazilian_col_{col_idx}_quantile_vs_kmeans.png", bbox_inches="tight")
