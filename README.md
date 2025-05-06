@@ -20,8 +20,14 @@ In this paper, we challenge the long-standing assumption that equal-frequency bi
 ---
 
 ## Overview
-Explain **what** the experiments investigate (e.g. _“Comparing four feature-binning strategies for gradient-boosted regressors on OpenML benchmark suites”_).  
-Include a short diagram or bullet list if helpful.
+This repo contains the **exact code and data pipeline** used in our NeurIPS submission on feature-binning for gradient-boosted trees.
+
+* **What it does** – Compares four binning schemes (`kmeans`, `quantile`, `linspace`, `exact`) on OpenML regression tasks, measuring MSE & ROC_AUC across multiple random seeds.
+* **How to run** – Either call the master file `run_all.py` for a full sweep or launch one of the experiments in `scripts` with custom CLI flags.
+* **Outputs** – Experiments save JSON summaries, numpy arrays, and images, and print out publication-ready LaTeX with a single command.
+
+Licensed under **Apache 2.0** for unrestricted use and extension.
+
 
 ---
 
@@ -40,8 +46,8 @@ Include a short diagram or bullet list if helpful.
 ## Installation
 Follow these instructions to install all packages needed for this project.
 ```bash
-git clone <repo-url>
-cd <repo>
+git clone https://github.com/ashlab11/KMeansGBDT
+cd KMeansGBDT
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt  # ← everything you need is pinned here
