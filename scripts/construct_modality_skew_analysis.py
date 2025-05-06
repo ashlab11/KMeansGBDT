@@ -78,7 +78,7 @@ def plot_heatmap(delta, x_arr, y_arr, x_label, y_label, title, file_path, cmap, 
     im = ax.imshow(mean,
                 cmap=cmap,
                 origin='lower',
-                vmin=0,
+                vmin=-10,
                 vmax=max,
                 aspect='auto')
 
@@ -233,25 +233,25 @@ def experiment_6(runs = 20):
 
 if __name__ == "__main__":
     runs = 50
-    """d1, xarr1, yarr1 = experiment_1(runs = runs)
+    d1, xarr1, yarr1 = experiment_1(runs = runs)
     np.save('d1.npy', d1)
-    print("Experiment 1 done")"""
+    print("Experiment 1 done")
     
-    """d2, xarr2, yarr2 = experiment_2(runs = runs)
+    d2, xarr2, yarr2 = experiment_2(runs = runs)
     np.save('d2.npy', d2)
     print("Experiment 2 done")
     
     d3, xarr3, yarr3 = experiment_3(runs = runs)
     np.save('d3.npy', d3)
-    print("Experiment 3 done")"""
+    print("Experiment 3 done")
     
-    """d4, xarr4, yarr4 = experiment_4(runs = runs)
+    d4, xarr4, yarr4 = experiment_4(runs = runs)
     np.save('d4.npy', d4)
     print("Experiment 4 done")
     
     d5, xarr5, yarr5 = experiment_5(runs = runs)
     np.save('d5.npy', d5)
-    print("Experiment 5 done")"""
+    print("Experiment 5 done")
     
     d6, xarr6, yarr6 = experiment_6(runs = runs)
     np.save('d6.npy', d6)
