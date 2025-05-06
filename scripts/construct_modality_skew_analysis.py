@@ -6,6 +6,7 @@ from scipy.stats import uniform, randint, loguniform
 from sklearn.ensemble import GradientBoostingRegressor
 from typing import Callable
 from src import DataBinner 
+import argparse
 
 # ------------------------------------------------------------------
 # Simple wrapper to train once on (X, y) with fixed basic hyper‑params
@@ -230,110 +231,122 @@ def experiment_6(runs = 20):
     
     return delta, bins, modes_grid
 #-------------------------------------------------------------------
+def get_cli_args():
+    parser = argparse.ArgumentParser(
+        description="Runs synthetic experiments to test the effect of binning on skewness and modality.")
+    parser.add_argument("--runs",   type=int, default=50)
+    parser.add_argument("--use_cached", action='store_true', default=False)
+    return parser.parse_args()
 
-if __name__ == "__main__":
-    runs = 50
+args = get_cli_args()
+runs   = args.runs
+use_cached = args.use_cached
+#-------------------------------------------------------------------
+
+runs = 50
+#If use_cached is set to True, the code will load the data from the saved files instead of running the experiments again
+if not use_cached:
     d1, xarr1, yarr1 = experiment_1(runs = runs)
-    np.save('d1.npy', d1)
+    np.save('saved_synthetic_results/d1.npy', d1)
     print("Experiment 1 done")
-    
+
     d2, xarr2, yarr2 = experiment_2(runs = runs)
-    np.save('d2.npy', d2)
+    np.save('saved_synthetic_results/d2.npy', d2)
     print("Experiment 2 done")
-    
+
     d3, xarr3, yarr3 = experiment_3(runs = runs)
-    np.save('d3.npy', d3)
+    np.save('saved_synthetic_results/d3.npy', d3)
     print("Experiment 3 done")
-    
+
     d4, xarr4, yarr4 = experiment_4(runs = runs)
-    np.save('d4.npy', d4)
+    np.save('saved_synthetic_results/d4.npy', d4)
     print("Experiment 4 done")
-    
+
     d5, xarr5, yarr5 = experiment_5(runs = runs)
-    np.save('d5.npy', d5)
+    np.save('saved_synthetic_results/d5.npy', d5)
     print("Experiment 5 done")
-    
+
     d6, xarr6, yarr6 = experiment_6(runs = runs)
-    np.save('d6.npy', d6)
+    np.save('saved_synthetic_results/d6.npy', d6)
     print("Experiment 6 done")
-    
-    #Load data
-    d1, d2, d3 = np.load("d1.npy"), np.load("d2.npy"), np.load("d3.npy")
-    d4, d5, d6 = np.load("d4.npy"), np.load("d5.npy"), np.load("d6.npy")
-    xarr1, yarr1 = [5, 10, 15, 20], [0.0, 0.01, 0.02, 0.03, 0.04, 0.05]
-    xarr2, yarr2 = [5, 10, 15, 20], [3, 5, 7, 10]
-    xarr3, yarr3 = [5, 10, 15, 20], [0.0, 0.01, 0.02, 0.03, 0.04, 0.05]
-    xarr4, yarr4 = [8, 16, 32, 64, 128], [0.0, 0.01, 0.02, 0.03, 0.04, 0.05]
-    xarr5, yarr5 = [16, 32, 64, 128, 256], [0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 1]
-    xarr6, yarr6 = [3, 5, 7, 10], [16, 32, 64, 128, 256]
-    
-    common_cmap = 'YlGn'
-    #Taking the maximum value of the average deltas across all three experiments, used to set colorbar limits
-    vmax = abs(np.concatenate([d1.mean(axis=2).ravel(), d2.mean(axis=2).ravel(), d3.mean(axis=2).ravel(), 
-                               d4.mean(axis=2).ravel(), d5.mean(axis=2).ravel()])).max().round(-1)
-    
-    plot_heatmap(
-        delta=d1,           # experiment-1 matrix
-        x_arr=xarr1,
-        y_arr=yarr1,
-        x_label='Outlier scale',
-        y_label='Skew fraction\n(outliers / total)',
-        title='(1)  Single-mode data: outlier *fraction* vs. outlier *scale*',
-        file_path='images/outlier_sensitivity.png',
-        cmap=common_cmap, max = vmax
-    )
 
-    plot_heatmap(
-        delta=d2,           # experiment-2 matrix
-        x_arr=xarr2,
-        y_arr=yarr2,
-        x_label='Outlier scale',
-        y_label='Number of density modes',
-        title='(2)  1 % outliers: multi-modality vs. outlier size',
-        file_path='images/modes_scale_sensitivity.png',
-        cmap=common_cmap, max = vmax
-    )
+#Load data
+d1, d2, d3 = np.load("saved_synthetic_results/d1.npy"), np.load("saved_synthetic_results/d2.npy"), np.load("saved_synthetic_results/d3.npy")
+d4, d5, d6 = np.load("saved_synthetic_results/d4.npy"), np.load("saved_synthetic_results/d5.npy"), np.load("saved_synthetic_results/d6.npy")
+xarr1, yarr1 = [5, 10, 15, 20], [0.0, 0.01, 0.02, 0.03, 0.04, 0.05]
+xarr2, yarr2 = [5, 10, 15, 20], [3, 5, 7, 10]
+xarr3, yarr3 = [5, 10, 15, 20], [0.0, 0.01, 0.02, 0.03, 0.04, 0.05]
+xarr4, yarr4 = [8, 16, 32, 64, 128], [0.0, 0.01, 0.02, 0.03, 0.04, 0.05]
+xarr5, yarr5 = [16, 32, 64, 128, 256], [0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 1]
+xarr6, yarr6 = [3, 5, 7, 10], [16, 32, 64, 128, 256]
 
-    plot_heatmap(
-        delta=d3,           # experiment-3 matrix
-        x_arr=xarr3,
-        y_arr=yarr3,
-        x_label='Number of density modes',
-        y_label='Skew fraction\n(outliers / total)',
-        title='(3)  Fixed outlier size (5σ): multi-modality vs. outlier mass',
-        file_path='images/modes_frac_sensitivity.png',
-        cmap=common_cmap, max = vmax
-    )
-    
-    plot_heatmap(
-        delta=d4,           # experiment-4 matrix
-        x_arr=xarr4,
-        y_arr=yarr4,
-        x_label='Observations per bin',
-        y_label='Skew fraction\n(outliers / total)',
-        title='(4)  Bin size vs. outlier mass',
-        file_path='images/obs_per_bin_sensitivity.png',
-        cmap=common_cmap, max = vmax
-    )
-    
-    plot_heatmap(
-        delta=d5,           # experiment-5 matrix
-        x_arr=xarr5,
-        y_arr=yarr5,
-        x_label='Number of bins',
-        y_label='Skew fraction\n(outliers / total)',
-        title='(5)  Bin number vs. outlier mass',
-        file_path='images/num_bins_sensitivity.png',
-        cmap=common_cmap, max = vmax
-    )
-    
-    plot_heatmap(
-        delta=d6,           # experiment-6 matrix
-        x_arr=xarr6,
-        y_arr=yarr6,
-        x_label='Number of modes',
-        y_label='Number of bins',
-        title='(6)  Bin number vs. multi-modality',
-        file_path='images/modes_bins_sensitivity.png',
-        cmap=common_cmap, max = vmax
-    )
+common_cmap = 'YlGn'
+#Taking the maximum value of the average deltas across all three experiments, used to set colorbar limits
+vmax = abs(np.concatenate([d1.mean(axis=2).ravel(), d2.mean(axis=2).ravel(), d3.mean(axis=2).ravel(), 
+                            d4.mean(axis=2).ravel(), d5.mean(axis=2).ravel()])).max().round(-1)
+
+plot_heatmap(
+    delta=d1,           # experiment-1 matrix
+    x_arr=xarr1,
+    y_arr=yarr1,
+    x_label='Outlier scale',
+    y_label='Skew fraction\n(outliers / total)',
+    title='(1)  Single-mode data: outlier *fraction* vs. outlier *scale*',
+    file_path='images/outlier_sensitivity.png',
+    cmap=common_cmap, max = vmax
+)
+
+plot_heatmap(
+    delta=d2,           # experiment-2 matrix
+    x_arr=xarr2,
+    y_arr=yarr2,
+    x_label='Outlier scale',
+    y_label='Number of density modes',
+    title='(2)  1 % outliers: multi-modality vs. outlier size',
+    file_path='images/modes_scale_sensitivity.png',
+    cmap=common_cmap, max = vmax
+)
+
+plot_heatmap(
+    delta=d3,           # experiment-3 matrix
+    x_arr=xarr3,
+    y_arr=yarr3,
+    x_label='Number of density modes',
+    y_label='Skew fraction\n(outliers / total)',
+    title='(3)  Fixed outlier size (5σ): multi-modality vs. outlier mass',
+    file_path='images/modes_frac_sensitivity.png',
+    cmap=common_cmap, max = vmax
+)
+
+plot_heatmap(
+    delta=d4,           # experiment-4 matrix
+    x_arr=xarr4,
+    y_arr=yarr4,
+    x_label='Observations per bin',
+    y_label='Skew fraction\n(outliers / total)',
+    title='(4)  Bin size vs. outlier mass',
+    file_path='images/obs_per_bin_sensitivity.png',
+    cmap=common_cmap, max = vmax
+)
+
+plot_heatmap(
+    delta=d5,           # experiment-5 matrix
+    x_arr=xarr5,
+    y_arr=yarr5,
+    x_label='Number of bins',
+    y_label='Skew fraction\n(outliers / total)',
+    title='(5)  Bin number vs. outlier mass',
+    file_path='images/num_bins_sensitivity.png',
+    cmap=common_cmap, max = vmax
+)
+
+plot_heatmap(
+    delta=d6,           # experiment-6 matrix
+    x_arr=xarr6,
+    y_arr=yarr6,
+    x_label='Number of modes',
+    y_label='Number of bins',
+    title='(6)  Bin number vs. multi-modality',
+    file_path='images/modes_bins_sensitivity.png',
+    cmap=common_cmap, max = vmax
+)
