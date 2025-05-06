@@ -24,8 +24,6 @@ for i, size in enumerate(sizes):
     times[i, 2] = timeit.timeit(lambda: kmeans_plus.fit_transform(X), number=1)
     times[i, 3] = timeit.timeit(lambda: kmeans_quantile.fit_transform(X), number=1)
 
-print(times)
-
 # ── seaborn style & palette ──────────────────────────────────────────────────
 sns.set_theme(style="whitegrid", font_scale=0.9)          # unobtrusive grid
 palette = sns.color_palette("colorblind", 4)              # C-B-safe colours
@@ -85,4 +83,4 @@ ax.legend(frameon=False, fontsize=7, loc="upper left", bbox_to_anchor=(1.02, 1))
 for spine in ("right", "top"):
     ax.spines[spine].set_visible(False)
 
-plt.savefig("images/execution_time.png", bbox_inches="tight")
+plt.savefig("images/FAKE_execution_time.png", bbox_inches="tight")
