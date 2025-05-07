@@ -1,6 +1,6 @@
 import json
 import openml
-from scipy.stats import ttest_rel, rankdata
+from scipy.stats import ttest_rel, rankdata, false_discovery_control, wilcoxon
 import lightgbm as lgb
 from src import DataBinner
 import numpy as np
@@ -12,7 +12,7 @@ num_datasets_reg = 18
 #Keywords that will be used to analyze experiment results
 def get_cli_args():
     parser = argparse.ArgumentParser(
-        description="Run one regression-binning experiment")
+        description="Analyze experiments")
     parser.add_argument("--num_seeds",   type=int, default=20)
     return parser.parse_args()
 
@@ -23,25 +23,21 @@ reg_benchmark_suite = openml.study.get_suite(336)
 class_benchmark_suite = openml.study.get_suite(337) 
 
 #We want to be ranking across datasets within each model type
-    
-def bold_if_sig(best_val, best_arr, second_val, second_arr):
-    """Return '{best_val:.5f}' or '\\textbf{...}' depending on p-value."""
-    p_val = ttest_rel(best_arr, second_arr).pvalue
+def star_if_sig(best_val, pval_adj_bool):
     formatted = f"{best_val:.3f}"
-
-    if p_val < 0.05:
+    if pval_adj_bool:
         return f"{formatted}$\\mathrlap{{^{{**}}}}$"
-    elif p_val < 0.1:
-        return f"{formatted}$\\mathrlap{{^{{*}}}}$"
     else:
         return formatted
 
+p_vals = []
+latex_results = [] #Results for each idx, which we'll use later on to print!
 
 #Classification first
 print("DATA FOR CLASSIFICATION")
 mrr_class = {'quantile': [], 'linspace': [], 'kmeans': []}
 for idx in range(num_datasets_class):
-    if idx not in [2, 8]: #Skip Higgs due to large computational cost
+    if idx != 8: #Skip Higgs due to large computational cost
         task_id = class_benchmark_suite.tasks[idx]
         task = openml.tasks.get_task(task_id)
         dataset = task.get_dataset()
@@ -84,19 +80,20 @@ for idx in range(num_datasets_class):
         # ------------------------------------------------------------
         sorted_methods = sorted(means, key=means.get, reverse = True)          # best first
         best, second = sorted_methods[:2]
-
-        fmt = {}                                              # holds strings to print
-        for m in ['quantile', 'linspace', 'kmeans']:
-            if m == best:                                     # winner – maybe bold
-                fmt[m] = bold_if_sig(means[m],
-                                    results[m],              # arrays for t-test
-                                    means[second],
-                                    results[second])
-            else:                                             # plain number
-                fmt[m] = f"{(means[m]):.3f}"
-                
-        print(f"{name} & {fmt['quantile']} & {fmt['linspace']} & {fmt['kmeans']} & {exact_mean:.3f} \\\\")
-
+        
+        #Appending p-vals
+        p_vals.append(ttest_rel(results[best], results[second]).pvalue)
+        latex_results.append({
+          'name': name, 
+          'dataset_type': 'Classification',
+          'bins': 255,
+          'model': 'SKL',
+          'best': best,
+          'quantile': quantile_mean,
+          'linspace': linspace_mean,
+          'kmeans': kmeans_mean,
+          'exact': exact_mean,  
+        })
     
 #Dictionary that we put our final rankings in
 mrr_class_avg = {method: np.mean(mrr_class[method]) for method in ['quantile', 'linspace', 'kmeans']}
@@ -120,7 +117,7 @@ print("\\end{table}")
 #Regression
 for n_bins in [63, 255]:
     mrr_reg = {'quantile': [], 'linspace': [], 'kmeans': []}
-    print("REGRESSION RESULTS, Bins = ", n_bins)
+    print("REGRESSION RESULTS, BINS = ", n_bins)
     for idx in range(num_datasets_reg):
         task_id = reg_benchmark_suite.tasks[idx]
         task = openml.tasks.get_task(task_id)
@@ -168,19 +165,21 @@ for n_bins in [63, 255]:
         # ------------------------------------------------------------
         sorted_methods = sorted(means, key=means.get)          # best first
         best, second = sorted_methods[:2]
-
-        fmt = {}                                              # holds strings to print
-        for m in ['quantile', 'linspace', 'kmeans']:
-            if m == best:                                     # winner – maybe bold
-                fmt[m] = bold_if_sig(means[m] / divisor,
-                                    results[m],              # arrays for t-test
-                                    means[second] / divisor,
-                                    results[second])
-            else:                                             # plain number
-                fmt[m] = f"{(means[m] / divisor):.3f}"
-                
-        print(f"{name} $(10^{{{exponent}}})$ & {fmt['quantile']} & {fmt['linspace']} & {fmt['kmeans']} & {(exact_mean / divisor) :.3f} \\\\")
         
+        #Appending p-vals
+        p_vals.append(ttest_rel(results[best], results[second]).pvalue)
+        latex_results.append({
+          'name': name, 
+          'dataset_type': 'Regression',
+          'bins': n_bins,
+          'model': 'SKL',
+          'best': best,
+          'quantile': quantile_mean,
+          'linspace': linspace_mean,
+          'kmeans': kmeans_mean,
+          'exact': exact_mean,  
+        })
+    
     #Dictionary that we put our final rankings in
     mrr_reg_avg = {method: np.mean(mrr_reg[method]) for method in ['quantile', 'linspace', 'kmeans']}
 
@@ -200,3 +199,125 @@ for n_bins in [63, 255]:
     print("    \\end{tabular}")
     print("\\end{table}")
 
+#Results for the three XGBoost runs
+#Regression
+mrr_reg = {'quantile': [], 'linspace': [], 'kmeans': []}
+print("REGRESSION RESULTS, XGB")
+for idx in [0, 8, 15]:
+    task_id = reg_benchmark_suite.tasks[idx]
+    task = openml.tasks.get_task(task_id)
+    dataset = task.get_dataset()
+    name = dataset.name
+    name = name.replace("_", "\_")
+    obs = dataset.qualities['NumberOfInstances']
+    features = dataset.qualities['NumberOfFeatures']
+
+    with open(f"benchmark_experiments/reg_bench_{idx}_xgboost.json", "r") as f:
+        results = json.load(f)
+        linspace_dict = results['linspace']
+        quantile_dict = results['quantile'] 
+        kmeans_dict = results['kmeans']
+        exact_dict = results['exact']
+
+    kmeans_results = kmeans_dict['mse']
+    linspace_results = linspace_dict['mse']
+    quantile_results = quantile_dict['mse']
+    exact_results = exact_dict['mse']
+
+    kmeans_mean = np.mean(kmeans_results)
+    #Find correct value for exponent for scientific notation
+    exponent = int(np.floor(np.log10(kmeans_mean)))
+    divisor = 10 ** exponent
+    
+    linspace_mean = np.mean(linspace_results)
+    quantile_mean = np.mean(quantile_results)
+    exact_mean = np.mean(exact_results)
+    
+    results = {'kmeans': kmeans_results, 'linspace': linspace_results, 'quantile': quantile_results}
+    means = {method: np.mean(results[method]) for method in results}
+    for method in results.keys():
+        mrr_reg[method].append(inv_ranks[method])
+
+    # ------------------------------------------------------------
+    # Find best / second-best (lower MSE = better) and format cells
+    # ------------------------------------------------------------
+    sorted_methods = sorted(means, key=means.get)          # best first
+    best, second = sorted_methods[:2]
+    
+    #Appending p-vals
+    p_vals.append(ttest_rel(results[best], results[second]).pvalue)
+    latex_results.append({
+        'name': name, 
+        'dataset_type': 'Regression',
+        'bins': 255,
+        'model': 'XGB',
+        'best': best,
+        'quantile': quantile_mean,
+        'linspace': linspace_mean,
+        'kmeans': kmeans_mean,
+        'exact': exact_mean,  
+    })
+
+
+print("INDIVIDUAL TABULAR RESULTS")
+
+#Working with adjusted p-values
+p_vals = [1 if np.isnan(p) else p for p in p_vals]
+ps_adjusted = false_discovery_control(p_vals)
+
+for idx, adjusted_p in enumerate(ps_adjusted):
+    if adjusted_p < 0.05:
+        latex_results[idx]['pval'] = True
+    else:
+        latex_results[idx]['pval'] = False
+        
+curr_dataset_type = "Classification"
+curr_bins = 255
+curr_model = "SKL"
+print(f"Results for {curr_dataset_type} with {curr_bins} bins and {curr_model} model")
+for result in latex_results:
+    if result['model'] != curr_model or result['bins'] != curr_bins or result['dataset_type'] != curr_dataset_type:
+        curr_dataset_type = result['dataset_type']
+        curr_bins = result['bins']
+        curr_model = result['model']
+        print(f"Results for {curr_dataset_type} with {curr_bins} bins and {curr_model} model")
+    fmt = {} #Holds strings to print
+    
+    #Formatting assuming classification
+    if result['dataset_type'] == 'Classification':
+        for m in ['quantile', 'linspace', 'kmeans']:
+            if m == result['best']:                                     # winner – maybe bold
+                fmt[m] = star_if_sig(result[m], result['pval'])
+            else:                                             # plain number
+                fmt[m] = f"{(result[m]):.3f}"
+        fmt['exact'] = f"{result['exact']:.3f}"
+        
+        print(f"{result['name']} & {fmt['quantile']} & {fmt['linspace']} & {fmt['kmeans']} & {fmt['exact']} \\\\")
+    else:
+        #Need to deal with exponent
+        exponent = int(np.floor(np.log10(result['quantile'])))
+        divisor = 10 ** exponent
+        for m in ['quantile', 'linspace', 'kmeans']:
+            if m == result['best']:                                     # winner – maybe bold
+                fmt[m] = star_if_sig(result[m] / divisor, result['pval'])
+            else:                                             # plain number
+                fmt[m] = f"{(result[m] / divisor):.3f}"
+        fmt['exact'] = f"{result['exact'] / divisor:.3f}"
+        
+        print(f"{result['name']} $(10^{{{exponent}}})$ & {fmt['quantile']} & {fmt['linspace']} & {fmt['kmeans']} & {fmt['exact']} \\\\")    
+        
+#Checking statistical significance for mrr
+print("Statistical significance for MRR, Reg")
+sorted_mrr_reg = sorted(mrr_reg_avg, key = mrr_reg_avg.get)
+best, second = sorted_mrr_reg[-2:]
+best_results, second_results = mrr_reg[best], mrr_reg[second]
+p_val_reg = wilcoxon(best_results, second_results).pvalue
+print(f"Best: {best}, Second: {second}, p-value: {p_val_reg}")
+
+#Checking statistical significance for mrr
+print("Statistical significance for MRR, Class")
+sorted_mrr_class = sorted(mrr_class_avg, key = mrr_class_avg.get)
+best, second = sorted_mrr_class[-2:]
+best_results, second_results = mrr_class[best], mrr_class[second]
+p_val_class = ttest_rel(best_results, second_results).pvalue
+print(f"Best: {best}, Second: {second}, p-value: {p_val_class}")

@@ -12,6 +12,7 @@ from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error, r2_score
 from joblib import Memory
+from xgboost import XGBRegressor
 from src import DataBinner 
 import argparse
 
@@ -22,12 +23,14 @@ def get_cli_args():
     parser.add_argument("--num_seeds",   type=int, default=20)
     parser.add_argument("--benchmark_id",type=int, default=0)
     parser.add_argument("--n_bins",      type=int, default=255)
+    parser.add_argument("--xgboost", action='store_true', default=False)
     return parser.parse_args()
 
 args = get_cli_args()
 num_seeds   = args.num_seeds
 benchmark_id= args.benchmark_id
 n_bins      = args.n_bins
+xgboost    = args.xgboost
 
 def get_memory_for_dataset(bin_method, task_id, seed):
     """
@@ -37,21 +40,30 @@ def get_memory_for_dataset(bin_method, task_id, seed):
     cache_dir = os.path.join("../cached_datasets", bin_method, str(task_id), str(seed))
     os.makedirs(cache_dir, exist_ok=True)
     return Memory(location=cache_dir, verbose=0)
-
 # -------------------------
 warnings.filterwarnings("ignore", category=UserWarning)
 logging.getLogger("sklearn").setLevel(logging.ERROR)
 
-# Parameter distribution for sklearn
-param_dist = {
-    'gradientboostingregressor__n_estimators': randint(20, 300),
-    'gradientboostingregressor__learning_rate': loguniform(0.001, 0.5),
-    'gradientboostingregressor__max_depth': randint(3, 6),
-    'gradientboostingregressor__subsample': uniform(0.5, 0.5),
-    'gradientboostingregressor__max_features': uniform(0.5, 0.5)}
+# Parameter distribution for sklearn / xgboost
+if xgboost:
+    param_dist = {
+        'xgbregressor__n_estimators': randint(20, 300),
+        'xgbregressor__learning_rate': loguniform(0.001, 0.5),
+        'xgbregressor__max_depth': randint(3, 6),
+        'xgbregressor__subsample': uniform(0.5, 0.5),
+        'xgbregressor__colsample_bytree': uniform(0.5, 0.5),
+    }
+    model = XGBRegressor(tree_method="exact")
+else:
+    param_dist = {
+        'gradientboostingregressor__n_estimators': randint(20, 300),
+        'gradientboostingregressor__learning_rate': loguniform(0.001, 0.5),
+        'gradientboostingregressor__max_depth': randint(3, 6),
+        'gradientboostingregressor__subsample': uniform(0.5, 0.5),
+        'gradientboostingregressor__max_features': uniform(0.5, 0.5)}
 
-model = GradientBoostingRegressor()
-
+    model = GradientBoostingRegressor()
+    
 # List of binning methods to experiment with
 binning_methods = [
     'kmeans',
@@ -141,5 +153,9 @@ for i, bin_method in enumerate(binning_methods):
     results[bin_method]['r2'] = method_r2.tolist()
 
 #Saving the results to JSON file
-with open(f"benchmark_experiments/reg_bench_{benchmark_id}_bins_{n_bins}.json", "w") as f:
-    json.dump(results, f, indent=4)
+if xgboost is None:
+    with open(f"benchmark_experiments/reg_bench_{benchmark_id}_bins_{n_bins}.json", "w") as f:
+        json.dump(results, f, indent=4)
+else:
+    with open(f"benchmark_experiments/reg_bench_{benchmark_id}_xgb_{xgboost}.json", "w") as f:
+        json.dump(results, f, indent=4)

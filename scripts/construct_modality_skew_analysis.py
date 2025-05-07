@@ -2,6 +2,7 @@ import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from sklearn.datasets import make_friedman1
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from scipy.stats import false_discovery_control, ttest_1samp
 from scipy.stats import uniform, randint, loguniform
 from sklearn.ensemble import GradientBoostingRegressor
 from typing import Callable
@@ -67,9 +68,14 @@ def make_synthetic(n_obs, n_features, n_modes, mode_size, skew_factor, skew_scal
 def plot_heatmap(delta, x_arr, y_arr, x_label, y_label, title, file_path, cmap, max):
     print("Heatmap has been created")
     mean = np.mean(delta, axis = 2)
-    se   = delta.std(axis=2) / np.sqrt(30)        # std error per cell
-    ci95 = 1.96 * se
-    sig  = ci95 < np.abs(mean)      # CI excludes zero
+    
+    # Conduct t-tests and running BH
+    pvals = np.apply_along_axis(lambda x: ttest_1samp(x, 0.0).pvalue,
+                                axis=2,
+                                arr=delta)  
+    adj_p = false_discovery_control(pvals)
+    print(f"Percent of p-values changed: {np.sum(adj_p < 0.05) - np.sum((pvals < 0.05))}%")
+    sig = np.reshape(adj_p < 0.05, mean.shape) # significant if p < 0.05
 
     fig, ax = plt.subplots(figsize=(7, 6), dpi=120)
 
