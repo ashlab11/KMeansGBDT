@@ -49,7 +49,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 logging.getLogger("sklearn").setLevel(logging.ERROR)
 logging.getLogger("lightgbm").setLevel(logging.ERROR)
 
-# Parameter distribution for sklearn
+"""# Parameter distribution for sklearn
 param_dist = {
     'gradientboostingclassifier__n_estimators': randint(20, 300),
     'gradientboostingclassifier__learning_rate': loguniform(0.001, 0.5),
@@ -57,14 +57,23 @@ param_dist = {
     'gradientboostingclassifier__subsample': uniform(0.5, 0.5),
     'gradientboostingclassifier__max_features': uniform(0.5, 0.5)}
 
-model = GradientBoostingClassifier()
+model = GradientBoostingClassifier()"""
+
+param_dist = {
+    'xgbregressor__n_estimators': randint(20, 300),
+    'xgbregressor__learning_rate': loguniform(0.001, 0.5),
+    'xgbregressor__max_depth': randint(3, 6),
+    'xgbregressor__subsample': uniform(0.5, 0.5),
+    'xgbregressor__colsample_bytree': uniform(0.5, 0.5)
+}
+model = XGBRegressor()
 
 # List of binning methods to experiment with
 binning_methods = [
     'kmeans',
     'quantile',
     'linspace',
-    'exact'
+    #'exact'
 ]
 
 # Retrieve a benchmark suite from OpenML and select a task

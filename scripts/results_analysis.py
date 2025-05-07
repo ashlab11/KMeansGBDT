@@ -41,7 +41,7 @@ def bold_if_sig(best_val, best_arr, second_val, second_arr):
 print("DATA FOR CLASSIFICATION")
 mrr_class = {'quantile': [], 'linspace': [], 'kmeans': []}
 for idx in range(num_datasets_class):
-    if idx != 8: #Skip Higgs due to large computational cost
+    if idx not in [2, 8]: #Skip Higgs due to large computational cost
         task_id = class_benchmark_suite.tasks[idx]
         task = openml.tasks.get_task(task_id)
         dataset = task.get_dataset()
@@ -50,7 +50,7 @@ for idx in range(num_datasets_class):
         obs = dataset.qualities['NumberOfInstances']
         features = dataset.qualities['NumberOfFeatures']
 
-        with open(f"class_results_binning_{idx}.json", "r") as f:
+        with open(f"benchmark_experiments/class_bench_{idx}_bins_255.json", "r") as f:
             results = json.load(f)
             linspace_dict = results['linspace']
             quantile_dict = results['quantile'] 
@@ -78,7 +78,6 @@ for idx in range(num_datasets_class):
         
         for method in results.keys():
             mrr_class[method].append(inv_ranks[method])
-            mrr_total[method].append(inv_ranks[method])
 
         # ------------------------------------------------------------
         # Find best / second-best (lower MSE = better) and format cells
@@ -101,7 +100,6 @@ for idx in range(num_datasets_class):
     
 #Dictionary that we put our final rankings in
 mrr_class_avg = {method: np.mean(mrr_class[method]) for method in ['quantile', 'linspace', 'kmeans']}
-        
 
 # MRR for Classification
 print("%% Mean Reciprocal Rank (MRR) Table for Classification")
@@ -164,7 +162,6 @@ for n_bins in [63, 255]:
         
         for method in results.keys():
             mrr_reg[method].append(inv_ranks[method])
-            mrr_total[method].append(inv_ranks[method])
 
         # ------------------------------------------------------------
         # Find best / second-best (lower MSE = better) and format cells
