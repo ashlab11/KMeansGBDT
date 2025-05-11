@@ -1,4 +1,4 @@
-# Data and code for "Drop-in k-means binning for gradient-boosted trees"
+# Data and code for "A Case for Library-Level k-Means Binning in Histogram Gradient-Boosted Trees"
 
 In this paper, we challenge the long-standing assumption that equal-frequency bins provide adequate accuracy for GBDT histogram binning. We find that k-means often outperforms quantile binning in highly-skewed datasets or when using a low bin budget.
 
