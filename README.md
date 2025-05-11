@@ -44,13 +44,14 @@ Licensed under **Apache 2.0** for unrestricted use and extension.
 ```
 
 ## Installation
-Follow these instructions to install all packages needed for this project.
+Follow these instructions to install all packages needed for this project. Begin by downloading this repository/supplementary ZIP. Then, run the following:
 ```bash
 git clone https://github.com/ashlab11/KMeansGBDT
 cd KMeansGBDT
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt  # ← everything you need is pinned here
+pip install -e . # Installs this project's source code
 ```
 
 ## Quick Start

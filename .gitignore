@@ -4,3 +4,5 @@ cached_datasets/
 cached_transformers/
 toy_datasets/
 reduce.py
+src/__pycache__
+.DS_Store
