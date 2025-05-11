@@ -10,7 +10,7 @@ In this paper, we challenge the long-standing assumption that equal-frequency bi
 3. [Prerequisites](#prerequisites)
 4. [Installation](#installation)
 5. [Quick Start](#quick-start)
-   * [Using the Master Executable](#using-the-master-executable)
+   * [Running the Master Experiment](#running-the-master-experiment)
    * [Running a Single Experiment Script](#running-a-single-experiment-script)
 6. [Results & Logs](#results--logs)
 7. [Contributing](#contributing)
@@ -39,7 +39,7 @@ Licensed under **Apache 2.0** for unrestricted use and extension.
 ├── benchmark_experiments/ #Where real-world experiments live
 ├── saved_synthetic_results/ #Where synthetic experiment results live
 ├── src/ # reusable modules (e.g. DataBinner)
-├── run_all.py #Compiled executable
+├── run_all.py #Python code to run all experiments
 └── README.md
 ```
 
@@ -54,7 +54,7 @@ pip install -r requirements.txt  # ← everything you need is pinned here
 ```
 
 ## Quick Start
-### Using the Master Executable
+### Running the Master Experiment
 To run the full sweep in one run, just call 
 
 ```python3
