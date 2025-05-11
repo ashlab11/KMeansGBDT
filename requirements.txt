@@ -17,7 +17,6 @@ decorator==5.2.1
 executing==2.2.0
 fonttools==4.56.0
 graphviz==0.20.3
--e git+https://github.com/ashlab11/HistBinningLGBM.git@76c860d449e69064d01ba892c6c5545c0bce8401#egg=Hist_Binning_Methods
 idna==3.10
 immutabledict==4.2.1
 ipykernel==6.29.5
