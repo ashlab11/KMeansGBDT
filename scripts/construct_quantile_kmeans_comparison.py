@@ -1,3 +1,6 @@
+#This script wasn't used for the final paper, but is still useful for visualization
+#It generates a plot comparing the quantile and k-means binning methods on a specific column of a given dataset (Brazilian as of now)
+
 import matplotlib.pyplot as plt
 import openml
 import numpy as np
