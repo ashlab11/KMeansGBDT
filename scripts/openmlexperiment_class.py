@@ -135,7 +135,7 @@ for i, bin_method in enumerate(binning_methods):
         # Get accuracy
         y_pred = cv.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
-        accuracies[i, j, seed] = accuracy
+        accuracies[i, seed] = accuracy
         
         # Get ROC AUC
         y_pred_proba = cv.predict_proba(X_test)[:, 1]
