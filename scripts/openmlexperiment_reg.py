@@ -113,9 +113,9 @@ for i, bin_method in enumerate(binning_methods):
         
         if bin_method == 'exact':
             #We also want to test against how the model does assuming NO binning -- will take SIGNIFICANTLY longer
-            pipeline = make_pipeline(model, memory = memory)
+            pipeline = make_pipeline(model)
         else:
-            pipeline = make_pipeline(binner, model, memory = memory)
+            pipeline = make_pipeline(binner, model)
         
         cv = RandomizedSearchCV(
             pipeline, param_dist, n_iter=30, cv=5, n_jobs=-1,
@@ -131,8 +131,6 @@ for i, bin_method in enumerate(binning_methods):
         r2 = r2_score(y_test, y_pred)
         r2_scores[i, seed] = r2
                 
-        memory.clear(warn=False)
-
     #Printing out mean and std of MSE/R2 for each binning method and model
     method_mse = mses[i, :]
     mean_mse = np.mean(method_mse)
@@ -152,10 +150,18 @@ for i, bin_method in enumerate(binning_methods):
     results[bin_method]['mse'] = method_mse.tolist()
     results[bin_method]['r2'] = method_r2.tolist()
 
-#Saving the results to JSON file
-if xgboost is None:
+#Saving the results to existing JSON file
+with open(f"benchmark_experiments/reg_bench_{benchmark_id}_bins_{n_bins}.json", "r") as f:
+    existing_results = json.load(f)
+
+for bin_method in binning_methods:
+    existing_results[bin_method] = {}
+    existing_results[bin_method]['mse'] = results[bin_method]['mse']
+    existing_results[bin_method]['r2'] = results[bin_method]['r2']
+
+if not xgboost:
     with open(f"benchmark_experiments/reg_bench_{benchmark_id}_bins_{n_bins}.json", "w") as f:
-        json.dump(results, f, indent=4)
+        json.dump(existing_results, f, indent=4)
 else:
     with open(f"benchmark_experiments/reg_bench_{benchmark_id}_xgb_{xgboost}.json", "w") as f:
-        json.dump(results, f, indent=4)
+        json.dump(existing_results, f, indent=4)

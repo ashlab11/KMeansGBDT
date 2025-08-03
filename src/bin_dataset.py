@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans, MiniBatchKMeans
+from sklearn.cluster import KMeans
+from optbinning import ContinuousOptimalBinning, OptimalBinning, MDLP
+import time
+import jenkspy
+import kmeans1d
 
 class DataBinner:
     """
@@ -45,7 +49,7 @@ class DataBinner:
     # ------------------------------------------------------------------ #
     #  Core logic
     # ------------------------------------------------------------------ #
-    def _fit_one_column(self, col: np.ndarray):
+    def _fit_one_column(self, col: np.ndarray, y: np.ndarray):
         """Return representation needed at transform-time."""
         unique = np.unique(col)
         if len(unique) <= self.n_bins:
@@ -82,6 +86,22 @@ class DataBinner:
             cuts = (centres[:-1] + centres[1:]) / 2.0
             return cuts
         
+        if self.method == 'optimal_reg':
+            o = ContinuousOptimalBinning(name='feature', dtype='numerical', max_n_bins=self.n_bins)
+            o.fit(col, y)
+            return o
+        if self.method == 'optimal_reg_high_fidelity': 
+            o = ContinuousOptimalBinning(name='feature', dtype='numerical', max_n_bins=self.n_bins, max_n_prebins=self.n_bins)
+            o.fit(col, y)
+            return o
+        if self.method == 'optimal_kmeans':
+            _, centroids = kmeans1d.cluster(col, self.n_bins)
+            centers = np.sort(centroids)
+            cuts = (centers[:-1] + centers[1:]) / 2.0
+            return cuts
+        if self.method == 'jenks':
+            cuts = jenkspy.jenks_breaks(col, self.n_bins)
+            return np.array(cuts)
         raise ValueError("method must be 'linspace', 'quantile', or 'kmeans'")
 
     def fit(self, X, y=None):
@@ -93,7 +113,7 @@ class DataBinner:
         else:
             X_arr = np.asarray(X)
         for j in range(X_arr.shape[1]):
-            cuts = self._fit_one_column(X_arr[:, j])
+            cuts = self._fit_one_column(X_arr[:, j], y)
             self._models.append(cuts)
         return self
 
@@ -108,11 +128,16 @@ class DataBinner:
             cols = None
             X_arr = np.asarray(X)
 
-        out = np.zeros_like(X_arr, dtype=int)
+        # Initialize output array with float type for MDLP method
+        dtype = float if self.method == 'mdlp' else int
+        out = np.zeros_like(X_arr, dtype=dtype)
 
-        for j, breakpoints in enumerate(self._models):
-            out[:, j] = np.digitize(X_arr[:, j], breakpoints)
-
+        for j, model in enumerate(self._models):
+            if isinstance(model, np.ndarray):
+                out[:, j] = np.digitize(X_arr[:, j], model)
+            else:
+                out[:, j] = model.transform(X_arr[:, j])
+                
         if cols is not None:
             out = pd.DataFrame(out, columns=cols)
         return out

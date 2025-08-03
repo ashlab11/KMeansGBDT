@@ -49,7 +49,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 logging.getLogger("sklearn").setLevel(logging.ERROR)
 logging.getLogger("lightgbm").setLevel(logging.ERROR)
 
-"""# Parameter distribution for sklearn
+# Parameter distribution for sklearn
 param_dist = {
     'gradientboostingclassifier__n_estimators': randint(20, 300),
     'gradientboostingclassifier__learning_rate': loguniform(0.001, 0.5),
@@ -57,22 +57,14 @@ param_dist = {
     'gradientboostingclassifier__subsample': uniform(0.5, 0.5),
     'gradientboostingclassifier__max_features': uniform(0.5, 0.5)}
 
-model = GradientBoostingClassifier()"""
-
-param_dist = {
-    'xgbregressor__n_estimators': randint(20, 300),
-    'xgbregressor__learning_rate': loguniform(0.001, 0.5),
-    'xgbregressor__max_depth': randint(3, 6),
-    'xgbregressor__subsample': uniform(0.5, 0.5),
-    'xgbregressor__colsample_bytree': uniform(0.5, 0.5)
-}
-model = XGBRegressor()
+model = GradientBoostingClassifier()
 
 # List of binning methods to experiment with
 binning_methods = [
-    'kmeans',
-    'quantile',
-    'linspace',
+    #'kmeans',
+    #'quantile',
+    #'linspace',
+    'optimal_class'
     #'exact'
 ]
 
@@ -166,5 +158,13 @@ for i, bin_method in enumerate(binning_methods):
     results[bin_method]['roc_auc'] = method_roc.tolist()
 
 #Saving the results to JSON file
+with open(f"benchmark_experiments/class_bench_{benchmark_id}_bins_{n_bins}.json", "r") as f:
+    existing_results = json.load(f)
+
+for bin_method in binning_methods:
+    existing_results[bin_method] = {}
+    existing_results[bin_method]['accuracy'] = results[bin_method]['accuracy']
+    existing_results[bin_method]['roc_auc'] = results[bin_method]['roc_auc']
+
 with open(f"benchmark_experiments/class_bench_{benchmark_id}_bins_{n_bins}.json", "w") as f:
-    json.dump(results, f, indent=4)
+    json.dump(existing_results, f, indent=4)

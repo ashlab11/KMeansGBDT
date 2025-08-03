@@ -42,3 +42,6 @@ if __name__ == "__main__":
         
     #Running results analysis
     run_script("scripts/results_analysis.py", num_seeds=20)
+    
+    #Running optimal binning experiment
+    run_script("scripts/optimal_binning.py")
