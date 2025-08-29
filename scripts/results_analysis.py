@@ -14,10 +14,12 @@ def get_cli_args():
     parser = argparse.ArgumentParser(
         description="Analyze experiments")
     parser.add_argument("--num_seeds",   type=int, default=20)
+    parser.add_argument("--std_error",   action='store_true', default=False)
     return parser.parse_args()
 
 args = get_cli_args()
 num_seeds   = args.num_seeds
+std_error   = args.std_error #Whether to include standard error in the results
 
 reg_benchmark_suite = openml.study.get_suite(336)
 class_benchmark_suite = openml.study.get_suite(337) 
@@ -26,7 +28,7 @@ class_benchmark_suite = openml.study.get_suite(337)
 def star_if_sig(best_val, pval_adj_bool):
     formatted = f"{best_val:.3f}"
     if pval_adj_bool:
-        return f"{formatted}$\\mathrlap{{^{{**}}}}$"
+        return f"\\textbf{{{formatted}}}"
     else:
         return formatted
 
@@ -63,6 +65,12 @@ for idx in range(num_datasets_class):
         quantile_mean = np.mean(quantile_results)
         exact_mean = np.mean(exact_results)
         
+        if std_error:
+            kmeans_std = np.std(kmeans_results) / np.sqrt(num_seeds)
+            linspace_std = np.std(linspace_results) / np.sqrt(num_seeds)
+            quantile_std = np.std(quantile_results) / np.sqrt(num_seeds)
+            exact_std = np.std(exact_results) / np.sqrt(num_seeds)
+        
         # Calculating MRR within this dataset -- DO NOT include exact here
         results = {'kmeans': kmeans_results, 'linspace': linspace_results, 'quantile': quantile_results}
         means = {method: np.mean(results[method]) for method in results}
@@ -83,17 +91,34 @@ for idx in range(num_datasets_class):
         
         #Appending p-vals
         p_vals.append(ttest_rel(results[best], results[second]).pvalue)
-        latex_results.append({
-          'name': name, 
-          'dataset_type': 'Classification',
-          'bins': 255,
-          'model': 'SKL',
-          'best': best,
-          'quantile': quantile_mean,
-          'linspace': linspace_mean,
-          'kmeans': kmeans_mean,
-          'exact': exact_mean,  
-        })
+        if std_error:
+            latex_results.append({
+                'name': name, 
+                'dataset_type': 'Classification',
+                'bins': 255,
+                'model': 'SKL',
+                'best': best,
+                'quantile': quantile_mean,
+                'quantile_std': quantile_std,
+                'linspace': linspace_mean,
+                'linspace_std': linspace_std,
+                'kmeans': kmeans_mean,
+                'kmeans_std': kmeans_std,
+                'exact': exact_mean,
+                'exact_std': exact_std,  
+            })
+        else:
+            latex_results.append({
+                'name': name, 
+                'dataset_type': 'Classification',
+                'bins': 255,
+                'model': 'SKL',
+                'best': best,
+                'quantile': quantile_mean,
+                'linspace': linspace_mean,
+                'kmeans': kmeans_mean,
+                'exact': exact_mean,  
+            })
     
 #Dictionary that we put our final rankings in
 mrr_class_avg = {method: np.mean(mrr_class[method]) for method in ['quantile', 'linspace', 'kmeans']}
@@ -148,6 +173,12 @@ for n_bins in [63, 255]:
         quantile_mean = np.mean(quantile_results)
         exact_mean = np.mean(exact_results)
         
+        if std_error:
+            kmeans_std = np.std(kmeans_results) / np.sqrt(num_seeds)
+            linspace_std = np.std(linspace_results) / np.sqrt(num_seeds)
+            quantile_std = np.std(quantile_results) / np.sqrt(num_seeds)
+            exact_std = np.std(exact_results) / np.sqrt(num_seeds)
+        
         # Calculating MRR within this dataset -- DO NOT include exact here
         results = {'kmeans': kmeans_results, 'linspace': linspace_results, 'quantile': quantile_results}
         means = {method: np.mean(results[method]) for method in results}
@@ -168,18 +199,34 @@ for n_bins in [63, 255]:
         
         #Appending p-vals
         p_vals.append(ttest_rel(results[best], results[second]).pvalue)
-        latex_results.append({
-          'name': name, 
-          'dataset_type': 'Regression',
-          'bins': n_bins,
-          'model': 'SKL',
-          'best': best,
-          'quantile': quantile_mean,
-          'linspace': linspace_mean,
-          'kmeans': kmeans_mean,
-          'exact': exact_mean,  
-        })
-    
+        if std_error:
+            latex_results.append({
+                'name': name, 
+                'dataset_type': 'Regression',
+                'bins': n_bins,
+                'model': 'SKL',
+                'best': best,
+                'quantile': quantile_mean,
+                'quantile_std': quantile_std,
+                'linspace': linspace_mean,
+                'linspace_std': linspace_std,
+                'kmeans': kmeans_mean,
+                'kmeans_std': kmeans_std,
+                'exact': exact_mean,
+                'exact_std': exact_std,  
+            })
+        else:
+            latex_results.append({
+            'name': name, 
+            'dataset_type': 'Regression',
+            'bins': n_bins,
+            'model': 'SKL',
+            'best': best,
+            'quantile': quantile_mean,
+            'linspace': linspace_mean,
+            'kmeans': kmeans_mean,
+            'exact': exact_mean,  
+            })
     #Dictionary that we put our final rankings in
     mrr_reg_avg = {method: np.mean(mrr_reg[method]) for method in ['quantile', 'linspace', 'kmeans']}
 
@@ -233,6 +280,12 @@ for idx in [0, 8, 15]:
     quantile_mean = np.mean(quantile_results)
     exact_mean = np.mean(exact_results)
     
+    if std_error:
+        kmeans_std = np.std(kmeans_results) / np.sqrt(num_seeds)
+        linspace_std = np.std(linspace_results) / np.sqrt(num_seeds)
+        quantile_std = np.std(quantile_results) / np.sqrt(num_seeds)
+        exact_std = np.std(exact_results) / np.sqrt(num_seeds)
+    
     results = {'kmeans': kmeans_results, 'linspace': linspace_results, 'quantile': quantile_results}
     means = {method: np.mean(results[method]) for method in results}
     for method in results.keys():
@@ -246,17 +299,34 @@ for idx in [0, 8, 15]:
     
     #Appending p-vals
     p_vals.append(ttest_rel(results[best], results[second]).pvalue)
-    latex_results.append({
-        'name': name, 
-        'dataset_type': 'Regression',
-        'bins': 255,
-        'model': 'XGB',
-        'best': best,
-        'quantile': quantile_mean,
-        'linspace': linspace_mean,
-        'kmeans': kmeans_mean,
-        'exact': exact_mean,  
-    })
+    if std_error:
+        latex_results.append({
+            'name': name, 
+            'dataset_type': 'Regression',
+            'bins': 255,
+            'model': 'XGB',
+            'best': best,
+            'quantile': quantile_mean,
+            'quantile_std': quantile_std,
+            'linspace': linspace_mean,
+            'linspace_std': linspace_std,
+            'kmeans': kmeans_mean,
+            'kmeans_std': kmeans_std,
+            'exact': exact_mean,  
+            'exact_std': exact_std,  
+        })
+    else:
+        latex_results.append({
+            'name': name, 
+            'dataset_type': 'Regression',
+            'bins': 255,
+            'model': 'XGB',
+            'best': best,
+            'quantile': quantile_mean,
+            'linspace': linspace_mean,
+            'kmeans': kmeans_mean,
+            'exact': exact_mean,  
+        })
 
 
 print("INDIVIDUAL TABULAR RESULTS")
@@ -275,22 +345,37 @@ curr_dataset_type = "Classification"
 curr_bins = 255
 curr_model = "SKL"
 print(f"Results for {curr_dataset_type} with {curr_bins} bins and {curr_model} model")
+print("--------------------------------")
+
 for result in latex_results:
     if result['model'] != curr_model or result['bins'] != curr_bins or result['dataset_type'] != curr_dataset_type:
         curr_dataset_type = result['dataset_type']
         curr_bins = result['bins']
         curr_model = result['model']
         print(f"Results for {curr_dataset_type} with {curr_bins} bins and {curr_model} model")
+        print("--------------------------------")
+
     fmt = {} #Holds strings to print
     
     #Formatting assuming classification
     if result['dataset_type'] == 'Classification':
         for m in ['quantile', 'linspace', 'kmeans']:
-            if m == result['best']:                                     # winner – maybe bold
-                fmt[m] = star_if_sig(result[m], result['pval'])
-            else:                                             # plain number
-                fmt[m] = f"{(result[m]):.3f}"
-        fmt['exact'] = f"{result['exact']:.3f}"
+            if std_error:
+                mean_val = result[m]
+                se_val = result[f"{m}_std"]
+                if m == result['best']:
+                    fmt[m] = f"{star_if_sig(mean_val, result['pval'])} ({se_val:.3f})"
+                else:
+                    fmt[m] = f"{mean_val:.3f} ({se_val:.3f})"
+            else:
+                if m == result['best']:
+                    fmt[m] = star_if_sig(result[m], result['pval'])
+                else:
+                    fmt[m] = f"{(result[m]):.3f}"
+        if std_error:
+            fmt['exact'] = f"{result['exact']:.3f} ({result['exact_std']:.3f})"
+        else:
+            fmt['exact'] = f"{result['exact']:.3f}"
         
         print(f"{result['name']} & {fmt['quantile']} & {fmt['linspace']} & {fmt['kmeans']} & {fmt['exact']} \\\\")
     else:
@@ -298,11 +383,22 @@ for result in latex_results:
         exponent = int(np.floor(np.log10(result['quantile'])))
         divisor = 10 ** exponent
         for m in ['quantile', 'linspace', 'kmeans']:
-            if m == result['best']:                                     # winner – maybe bold
-                fmt[m] = star_if_sig(result[m] / divisor, result['pval'])
-            else:                                             # plain number
-                fmt[m] = f"{(result[m] / divisor):.3f}"
-        fmt['exact'] = f"{result['exact'] / divisor:.3f}"
+            if std_error:
+                mean_scaled = result[m] / divisor
+                se_scaled = result[f"{m}_std"] / divisor
+                if m == result['best']:
+                    fmt[m] = f"{star_if_sig(mean_scaled, result['pval'])} ({se_scaled:.3f})"
+                else:
+                    fmt[m] = f"{mean_scaled:.3f} ({se_scaled:.3f})"
+            else:
+                if m == result['best']:
+                    fmt[m] = star_if_sig(result[m] / divisor, result['pval'])
+                else:
+                    fmt[m] = f"{(result[m] / divisor):.3f}"
+        if std_error:
+            fmt['exact'] = f"{result['exact'] / divisor:.3f} ({result['exact_std'] / divisor:.3f})"
+        else:
+            fmt['exact'] = f"{result['exact'] / divisor:.3f}"
         
         print(f"{result['name']} $(10^{{{exponent}}})$ & {fmt['quantile']} & {fmt['linspace']} & {fmt['kmeans']} & {fmt['exact']} \\\\")    
         

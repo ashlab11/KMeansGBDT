@@ -94,4 +94,4 @@ ax.legend(frameon=False, fontsize=7, loc="upper left", bbox_to_anchor=(1.02, 1))
 for spine in ("right", "top"):
     ax.spines[spine].set_visible(False)
 
-plt.savefig("images/FAKE_execution_time.png", bbox_inches="tight")
+plt.savefig("images/execution_time.png", bbox_inches="tight")
