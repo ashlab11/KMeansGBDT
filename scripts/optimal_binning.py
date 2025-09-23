@@ -32,11 +32,10 @@ def sample_params():
 
 # List of binning methods to experiment with
 binning_methods = [
-    #'quantile',
-    #'optimal_reg', 
-    #'optimal_kmeans',
-    #'kmeans' 
-    'jenks'
+    'quantile',
+    'optimal_reg', 
+    'optimal_kmeans',
+    'kmeans' 
 ]
 
 # Retrieve a benchmark suite from OpenML and select a task

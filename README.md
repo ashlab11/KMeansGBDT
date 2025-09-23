@@ -5,17 +5,18 @@ In this paper, we challenge the long-standing assumption that equal-frequency bi
 ---
 
 ## Table of Contents
-1. [Overview](#overview)
-2. [Folder Structure](#folder-structure)
-3. [Prerequisites](#prerequisites)
-4. [Installation](#installation)
-5. [Quick Start](#quick-start)
-   * [Running the Master Experiment](#running-the-master-experiment)
-   * [Running a Single Experiment Script](#running-a-single-experiment-script)
-6. [Results & Logs](#results--logs)
-7. [Contributing](#contributing)
-8. [License](#license)
-9. [Contact](#contact)
+- [Data and code for "A Case for Library-Level k-Means Binning in Histogram Gradient-Boosted Trees"](#data-and-code-for-a-case-for-library-level-k-means-binning-in-histogram-gradient-boosted-trees)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Folder Structure](#folder-structure)
+  - [Installation (Needs **Python ≥ 3.11**)](#installation-needs-python--311)
+  - [Quick Start](#quick-start)
+    - [Running the Master Experiment](#running-the-master-experiment)
+    - [Running a Single Experiment Script](#running-a-single-experiment-script)
+  - [Results and Logs](#results-and-logs)
+  - [Contributing](#contributing)
+  - [License](#license)
+  - [Contact](#contact)
 
 ---
 
@@ -103,7 +104,20 @@ benchmark_experiments/reg_bench_{benchmark_id}\_bins\_{n_bins}.json
 
 Replace reg with class to see classification experiments.
 
-**Synthetic experiments** have their final graphs in [images](images). Saved numpy arrays can be found in [saved_synthetic_results](saved_synthetic_results)
+**Synthetic experiments** have their final graphs in [images](images). Saved numpy arrays can be found in [saved_synthetic_results](saved_synthetic_results).
+
+To generate **table results**, run
+
+```python3
+python3 scripts/results_analysis.py
+```
+
+Optional flags:
+
+| Flag          | Default | Description                                                     | Example          |
+| ------------- | ------- | --------------------------------------------------------------- | ---------------- |
+| `--num_seeds` | `20`    | Number of random seeds (should match earlier experimental runs) | `--num_seeds 10` |
+| `--std_error` | `False` | Include standard errors in the results tables                   | `--std_error`    |
 
 
 ## Contributing
