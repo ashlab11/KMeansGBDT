@@ -80,14 +80,14 @@ python3 scripts/construct_modality_skew_analysis.py
 Optional flags:
 | Flag           | Default | Description                                                              | Example        |
 | -------------- | ------- | ------------------------------------------------------------------------ | -------------- |
-| `--seeds`      | `50`    | Number of random train/test splits to execute                            | `--seeds 10`   |
+| `--runs`      | `50`    | Number of random train/test splits to execute                            | `--seeds 10`   |
 | `--use_cached` | `False`  | If present, bypasses training and generates images from existing results | `--use_cached` |
 
 **Benchmark Experiments**
 
 To re-run real-world benchmarks, call:
 ```python3
-python3 scripts/openml_experiment_reg.py
+python3 scripts/openmlexperiment_reg.py
 ```
 
 (If you'd like to call the classifcation experiments instead, replace reg with class).
@@ -108,7 +108,7 @@ Replace reg with class to see classification experiments.
 
 **Synthetic experiments** have their final graphs in [images](images). Saved numpy arrays can be found in [saved_synthetic_results](saved_synthetic_results).
 
-To generate **table results**, run
+To generate **LaTeX table results**, run
 
 ```python3
 python3 scripts/results_analysis.py
