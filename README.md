@@ -1,5 +1,7 @@
 # Data and code for "A Case for Library-Level k-Means Binning in Histogram Gradient-Boosted Trees"
 
+[![Paper](https://img.shields.io/badge/Paper-TMLR-blue)](https://openreview.net/forum?id=UaTrLLspJa)
+
 In this paper, we challenge the long-standing assumption that equal-frequency bins provide adequate accuracy for GBDT histogram binning. We find that k-means often outperforms quantile binning in highly-skewed datasets or when using a low bin budget.
 
 ---
@@ -16,8 +18,7 @@ In this paper, we challenge the long-standing assumption that equal-frequency bi
   - [Results and Logs](#results-and-logs)
   - [Contributing](#contributing)
   - [License](#license)
-  - [Paper \& Citation](#paper--citation)
-  - [Contact](#contact)
+  - [Citation \& Contact](#citation--contact)
 
 ---
 
@@ -142,7 +143,7 @@ Open a pull request
 Released under the Apache License 2.0.  
 See [LICENSE](./LICENSE) for full details.
 
-## Paper & Citation
+## Citation & Contact
 
 This repository accompanies the paper  
 [A Case for Library-Level k-Means Binning in Histogram Gradient-Boosted Trees](https://openreview.net/forum?id=UaTrLLspJa), accepted at *Transactions on Machine Learning Research (TMLR)*.
@@ -157,6 +158,4 @@ If you use this code, please cite:
   year={2025}
 }
 ```
-
-## Contact
-Asher Labovich - asher_labovich@brown.edu
+For correspondence, please contact Asher Labovich at asher_labovich@brown.edu.
