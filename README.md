@@ -16,6 +16,7 @@ In this paper, we challenge the long-standing assumption that equal-frequency bi
   - [Results and Logs](#results-and-logs)
   - [Contributing](#contributing)
   - [License](#license)
+  - [Paper \& Citation](#paper--citation)
   - [Contact](#contact)
 
 ---
@@ -79,7 +80,7 @@ Optional flags:
 | Flag           | Default | Description                                                              | Example        |
 | -------------- | ------- | ------------------------------------------------------------------------ | -------------- |
 | `--seeds`      | `50`    | Number of random train/test splits to execute                            | `--seeds 10`   |
-| `--use_cached` | *off*   | If present, bypasses training and generates images from existing results | `--use_cached` |
+| `--use_cached` | `False`  | If present, bypasses training and generates images from existing results | `--use_cached` |
 
 **Benchmark Experiments**
 
@@ -94,8 +95,8 @@ Optional flags:
 | Flag           | Default | Description                                                              | Example        |
 | -------------- | ------- | ------------------------------------------------------------------------ | -------------- |
 | `--num_seeds`      | `20`    | Number of random train/test splits to execute                            | `--seeds 10`   |
-| `--benchmark_id` | 0   | Which dataset to run on (reference dataset description table in paper) | `--benchmark_id 4` |
-| `--n_bins` | 255   | How many bins to discretize continuous features into | `--n_bins 63` |
+| `--benchmark_id` | `0`   | Which dataset to run on (reference dataset description table in paper) | `--benchmark_id 4` |
+| `--n_bins` | `255`   | How many bins to discretize continuous features into | `--n_bins 63` |
 
 ## Results and Logs
 **Benchmark results** can be found in [benchmark_experiments](benchmark_experiments), in format 
@@ -140,6 +141,22 @@ Open a pull request
 ## License
 Released under the Apache License 2.0.  
 See [LICENSE](./LICENSE) for full details.
+
+## Paper & Citation
+
+This repository accompanies the paper  
+[A Case for Library-Level k-Means Binning in Histogram Gradient-Boosted Trees](https://openreview.net/forum?id=UaTrLLspJa), accepted at *Transactions on Machine Learning Research (TMLR)*.
+
+If you use this code, please cite:
+
+```bibtex
+@article{labovich2025kmeansgbdt,
+  title={A Case for Library-Level k-Means Binning in Histogram Gradient-Boosted Trees},
+  author={Labovich, Asher},
+  journal={Transactions on Machine Learning Research},
+  year={2025}
+}
+```
 
 ## Contact
 Asher Labovich - asher_labovich@brown.edu
